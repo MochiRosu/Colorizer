@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 
-public class UnityWindow : EditorWindow 
+public class UnityWindow : EditorWindow
 {
     Color color;
 
@@ -12,10 +12,13 @@ public class UnityWindow : EditorWindow
     {
         GetWindow<UnityWindow>("Colorizer");
     }
-    private void OnGUI()
+
+    void OnGUI()
     {
-        GUILayout.Label("Color the selected objects", EditorStyles.boldLabel);
+        GUILayout.Label("Color the selected object", EditorStyles.boldLabel);
+
         color = EditorGUILayout.ColorField("Color", color);
+
         if (GUILayout.Button("COLORIZE!"))
         {
             Colorize();
@@ -24,13 +27,24 @@ public class UnityWindow : EditorWindow
 
     void Colorize()
     {
-        foreach (GameObject obj in Selection.gameObjects)
+        GameObject selectedObject = Selection.activeGameObject;
+
+        if (selectedObject != null)
         {
-            Renderer renderer = obj.GetComponent<Renderer>();
+            Renderer renderer = selectedObject.GetComponent<Renderer>();
+
             if (renderer != null)
             {
                 renderer.sharedMaterial.color = color;
             }
+            else
+            {
+                Debug.LogWarning("Selected object does not have a Renderer component.");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("No object selected.");
         }
     }
 }
