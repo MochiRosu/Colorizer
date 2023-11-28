@@ -4,41 +4,80 @@ using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
-    public float speed = 5f;
-    public float rotationSpeed = 180f;
+    [Header("Movement")]
+    public float moveSpeed;
+    public float groundDrag;
+    public float jumpForce;
+    public float jumpCooldown;
+    public float airMultiplier;
+    private bool readyToJump = true;
+    [Header("keybinds")]
+    public KeyCode jumpKey = KeyCode.Space;
+    [Header("Ground Check")]
+    public float playerHeight;
+    public LayerMask whatIsGround;
+    private bool grounded;
+    public Transform orientation;
+    float horizontalInput;
+    float verticalInput;
+    Vector3 moveDirection;
+    Rigidbody rb;
 
-    private CharacterController characterController;
-
-    // Start is called before the first frame update
-    void Start()
+    private void Start()
     {
-        characterController = GetComponent<CharacterController>();
+        rb = GetComponent<Rigidbody>();
+        rb.freezeRotation = true;
     }
-
-    // Update is called once per frame
-    void Update()
+    private void Update()
+    {
+        grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.2f, whatIsGround);
+        MyInput();
+        SpeedControl();
+        if (grounded)
+            rb.drag = groundDrag;
+        else
+            rb.drag = 0;
+    }
+    private void FixedUpdate()
     {
         MovePlayer();
-        RotatePlayer();
     }
-
-    void MovePlayer()
+    private void MyInput()
     {
-        float horizontal = Input.GetAxis("Horizontal");
-        float vertical = Input.GetAxis("Vertical");
-
-        Vector3 movement = new Vector3(horizontal, 0f, vertical);
-        movement.Normalize(); // Ensures diagonal movement isn't faster
-
-        // Move the player in the desired direction
-        characterController.Move(movement * speed * Time.deltaTime);
+        horizontalInput = Input.GetAxisRaw("Horizontal");
+        verticalInput = Input.GetAxisRaw("Vertical");
+        if(Input.GetKey(jumpKey) && readyToJump && grounded)
+        {
+            readyToJump = false;
+            Jump();
+            Invoke(nameof(ResetJump), jumpCooldown);
+        }
     }
-
-    void RotatePlayer()
+    private void MovePlayer()
     {
-        float rotation = Input.GetAxis("Horizontal") * rotationSpeed * Time.deltaTime;
+        moveDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
+        if (grounded)
+            rb.AddForce(moveDirection.normalized * moveSpeed * 10f, ForceMode.Force);
+        else if(grounded)
+            rb.AddForce(moveDirection.normalized * moveSpeed * 10f * airMultiplier, ForceMode.Force);
 
-        // Rotate the player around the Y-axis
-        transform.Rotate(Vector3.up * rotation);
+    }
+    private void SpeedControl()
+    {
+        Vector3 flatVel = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+        if(flatVel.magnitude > moveSpeed)
+        {
+            Vector3 limitedVel = flatVel.normalized * moveSpeed;
+            rb.velocity = new Vector3(limitedVel.x, rb.velocity.y, limitedVel.z);
+        }
+    }
+    private void Jump()
+    {
+        rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+        rb.AddForce(transform.up * jumpForce, ForceMode.Impulse);
+    }
+    private void ResetJump()
+    {
+        readyToJump = true;
     }
 }
